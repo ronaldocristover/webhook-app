@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: webhook-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: webhook_db
+      MYSQL_USER: webhook_user
+      MYSQL_PASSWORD: webhook_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  webhook-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webhook-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: webhook_user
+      DB_PASSWORD: webhook_password
+      DB_NAME: webhook_db
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      ALLOWED_ORIGINS: http://localhost:3000
+      API_KEY: ${API_KEY:-default-secret-key-change-in-production}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    command: >
+      sh -c "echo 'Waiting for MySQL to be ready...' && 
+             sleep 5 && 
+             bun run src/db/migrate.ts && 
+             echo 'Starting webhook service...' && 
+             bun run src/index.ts"
+
+volumes:
+  mysql_data:
+    driver: local

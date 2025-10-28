@@ -1,0 +1,124 @@
+name: Deploy Webhook Service
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: webhook_db
+          MYSQL_USER: webhook_user
+          MYSQL_PASSWORD: test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run database migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: webhook_user
+          DB_PASSWORD: test_password
+          DB_NAME: webhook_db
+        run: bun run db:migrate
+
+      - name: Lint code
+        run: bun run --bun src/
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub (optional)
+        if: ${{ secrets.DOCKER_USERNAME }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image
+        run: docker build -t webhook-app:latest .
+
+      - name: Save image to artifact
+        run: docker save webhook-app:latest | gzip > webhook-app.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webhook-app-image
+          path: webhook-app.tar.gz
+
+      - name: Deploy to server
+        if: ${{ secrets.DEPLOY_HOST }}
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/webhook-app' }}
+        run: |
+          echo "$DEPLOY_KEY" > deploy_key.pem
+          chmod 600 deploy_key.pem
+          
+          echo "Copying files to server..."
+          scp -i deploy_key.pem -o StrictHostKeyChecking=no \
+            webhook-app.tar.gz \
+            $DEPLOY_USER@$DEPLOY_HOST:/tmp/
+          
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no $DEPLOY_USER@$DEPLOY_HOST << 'ENDSSH'
+            cd ${{ secrets.DEPLOY_PATH || '/opt/webhook-app' }}
+            
+            echo "Loading new image..."
+            docker load -i /tmp/webhook-app.tar.gz
+            
+            echo "Stopping old containers..."
+            docker-compose down || true
+            
+            echo "Starting new containers..."
+            docker-compose up -d
+            
+            echo "Cleaning up..."
+            rm /tmp/webhook-app.tar.gz
+            docker system prune -f
+            
+            echo "Deployment completed!"
+          ENDSSH
+          
+          rm deploy_key.pem
+
