@@ -1,33 +1,38 @@
-version: '3.8'
+version: '3.9'
 
 services:
   mysql:
     image: mysql:8.0
     container_name: webhook-mysql
-    restart: always
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: webhook_db
       MYSQL_USER: webhook_user
       MYSQL_PASSWORD: webhook_password
+      MYSQL_INIT_CONNECT: 'SET NAMES utf8mb4'
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "webhook_user", "-pwebhook_password"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    networks:
+      - webhook-network
 
   webhook-app:
     build:
       context: .
       dockerfile: Dockerfile
+      target: app
     container_name: webhook-app
-    restart: always
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -36,19 +41,36 @@ services:
       DB_USER: webhook_user
       DB_PASSWORD: webhook_password
       DB_NAME: webhook_db
-      RATE_LIMIT_WINDOW_MS: 60000
-      RATE_LIMIT_MAX_REQUESTS: 100
-      ALLOWED_ORIGINS: http://localhost:3000
-      API_KEY: ${API_KEY:-default-secret-key-change-in-production}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      API_KEY: ${API_KEY:-change-this-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - webhook-network
+    volumes:
+      - ./logs:/app/logs
     command: >
-      sh -c "echo 'Waiting for MySQL to be ready...' && 
-             sleep 5 && 
-             bun run src/db/migrate.ts && 
-             echo 'Starting webhook service...' && 
-             bun run src/index.ts"
+      sh -c "
+        echo 'Waiting for MySQL to be ready...' && 
+        sleep 5 && 
+        bunx drizzle-kit push && 
+        echo 'Starting webhook service...' && 
+        bun run src/index.ts
+      "
+
+networks:
+  webhook-network:
+    driver: bridge
 
 volumes:
   mysql_data:

@@ -86,41 +86,20 @@ docker-compose down
 
 ## How It Works
 
-### 1. Create a Webhook Endpoint
+### 1. Use Any UUID as Your Webhook Endpoint
 
-Each webhook endpoint has a unique UUID. Create one by sending a POST request:
+Simply use any identifier (UUID, name, or ID) as your webhook endpoint. There's no need to create or register webhooks first.
 
-```bash
-curl -X POST http://localhost:3000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My Webhook",
-    "description": "Testing webhook service"
-  }'
-```
+### 2. Send Requests to Your Webhook Endpoint
 
-Response:
-```json
-{
-  "success": true,
-  "data": {
-    "id": 1,
-    "uuid": "d1e6d71c-e277-43a0-9905-5730921b7b92",
-    "name": "My Webhook",
-    "description": "Testing webhook service",
-    "isActive": true,
-    "createdAt": "2025-10-28T23:09:06.000Z"
-  },
-  "webhook_url": "http://localhost:3000/webhook/d1e6d71c-e277-43a0-9905-5730921b7b92"
-}
-```
-
-### 2. Send Requests to Your Webhook
-
-Use the returned UUID to send webhook requests:
+Use any identifier to send webhook requests:
 
 ```bash
-curl -X POST http://localhost:3000/webhook/d1e6d71c-e277-43a0-9905-5730921b7b92 \
+# GET request
+curl http://localhost:3000/webhook/my-custom-id
+
+# POST request with JSON body
+curl -X POST http://localhost:3000/webhook/my-custom-id \
   -H "Content-Type: application/json" \
   -d '{
     "event": "user.created",
@@ -132,7 +111,7 @@ curl -X POST http://localhost:3000/webhook/d1e6d71c-e277-43a0-9905-5730921b7b92 
 ```
 
 The service will capture and store:
-- HTTP method
+- HTTP method (GET, POST, PUT, DELETE, PATCH, etc.)
 - Request path
 - All headers
 - Query parameters
@@ -143,51 +122,47 @@ The service will capture and store:
 
 ### 3. View Stored Requests
 
-Get all requests for a specific webhook:
+Get all requests for a specific webhook ID:
 
 ```bash
-curl "http://localhost:3000/admin/requests?webhook_uuid=d1e6d71c-e277-43a0-9905-5730921b7b92"
+curl "http://localhost:3000/admin/requests?webhook_uuid=my-custom-id"
 ```
 
 ## API Reference
 
-### Webhook Management
+### Webhook Endpoint
 
-#### Create a New Webhook
+#### Send Webhook Request to Any ID
 ```http
-POST /webhook
-Content-Type: application/json
-
-{
-  "name": "Optional webhook name",
-  "description": "Optional description"
-}
+GET /webhook/{id}
+POST /webhook/{id}
+PUT /webhook/{id}
+PATCH /webhook/{id}
+DELETE /webhook/{id}
 ```
 
-Response:
-```json
-{
-  "success": true,
-  "data": { /* webhook object */ },
-  "webhook_url": "http://localhost:3000/webhook/{uuid}"
-}
-```
+Replace `{id}` with any identifier (UUID, name, or custom ID). All HTTP methods are supported. The endpoint will capture and store the complete request including:
+- HTTP method
+- Path and query parameters
+- Headers
+- Request body (parsed and raw)
+- IP address
+- User agent
+- Timestamp
 
-#### List All Webhooks
-```http
-GET /webhook?limit=100&offset=0
-```
+**Examples:**
+```bash
+# Simple GET request
+curl http://localhost:3000/webhook/order-123
 
-#### Send Webhook Request
-```http
-POST /webhook/{uuid}
-GET /webhook/{uuid}
-PUT /webhook/{uuid}
-PATCH /webhook/{uuid}
-DELETE /webhook/{uuid}
-```
+# POST with JSON data
+curl -X POST http://localhost:3000/webhook/order-123 \
+  -H "Content-Type: application/json" \
+  -d '{"status": "shipped"}'
 
-All HTTP methods are supported. The webhook endpoint will capture and store the complete request.
+# POST with query parameters
+curl -X POST "http://localhost:3000/webhook/order-123?status=paid&amount=99.99"
+```
 
 ### Admin Endpoints
 

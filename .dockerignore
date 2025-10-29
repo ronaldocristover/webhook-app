@@ -8,8 +8,9 @@ dist
 .vscode
 .idea
 *.md
-Dockerfile
-docker-compose.yml
 README.md
-tsconfig.json
-
+*.test.ts
+*.test.js
+src/tests
+coverage
+.DS_Store

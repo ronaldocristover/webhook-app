@@ -22,7 +22,7 @@ export const webhookRequests = mysqlTable(
     {
         id: int('id').primaryKey().autoincrement(),
         webhookId: int('webhook_id').notNull(),
-        webhookUuid: varchar('webhook_uuid', { length: 36 }).notNull(),
+        webhookUuid: varchar('webhook_uuid', { length: 500 }).notNull(),
         method: varchar('method', { length: 10 }).notNull(),
         path: varchar('path', { length: 500 }).notNull(),
         headers: json('headers'),

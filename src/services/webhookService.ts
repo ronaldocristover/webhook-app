@@ -20,7 +20,7 @@ export class WebhookService {
     async saveWebhookRequest(data: WebhookRequestData): Promise<number> {
         try {
             const insertData: NewWebhookRequest = {
-                webhookId: data.webhookId,
+                webhookId: data.webhookId || 0,
                 webhookUuid: data.webhookUuid,
                 method: data.method,
                 path: data.path,

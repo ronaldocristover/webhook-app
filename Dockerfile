@@ -1,21 +1,63 @@
-FROM oven/bun:1 AS base
+# Multi-stage Dockerfile for webhook service
+
+# Stage 1: Build dependencies
+FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-FROM base AS install
+# Copy package files
+COPY package.json bun.lockb* ./
 
-RUN mkdir -p /temp/dev
-COPY package.json bun.lockb* /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+# Install dependencies
+RUN bun install --frozen-lockfile
 
-FROM base AS release
+# Stage 2: Production dependencies only
+FROM oven/bun:1 AS deps
 
-COPY --from=install /temp/dev/node_modules node_modules
-COPY . .
+WORKDIR /app
 
-ENV NODE_ENV=production
+COPY package.json bun.lockb* ./
 
+# Install only production dependencies
+RUN bun install --frozen-lockfile --production
+
+# Stage 3: Application code
+FROM oven/bun:1 AS app
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 bunuser
+
+# Copy package files
+COPY package.json ./
+COPY tsconfig.json ./
+COPY drizzle.config.ts ./
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy application source
+COPY src ./src
+COPY env.example ./.env.example
+
+# Set proper permissions
+RUN chown -R bunuser:nodejs /app
+
+# Switch to non-root user
+USER bunuser
+
+# Expose port
 EXPOSE 3000
 
-CMD [ "bun", "run", "src/index.ts" ]
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
 
+# Environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Start the application
+CMD ["bun", "run", "src/index.ts"]
