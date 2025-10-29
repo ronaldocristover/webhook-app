@@ -16,7 +16,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "webhook_user", "-pwebhook_password"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "webhook_user", "-pwebhook_password" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,10 +32,10 @@ services:
     container_name: webhook-app
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-8889}:8889"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 8889
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: webhook_user
@@ -50,7 +50,7 @@ services:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8889/health" ]
       interval: 30s
       timeout: 3s
       retries: 3

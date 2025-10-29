@@ -65,7 +65,7 @@ bunx drizzle-kit push
 bun run dev
 ```
 
-The server will be running at `http://localhost:3000`
+The server will be running at `http://localhost:8889`
 
 ### Docker Deployment
 
@@ -96,10 +96,10 @@ Use any identifier to send webhook requests:
 
 ```bash
 # GET request
-curl http://localhost:3000/webhook/my-custom-id
+curl http://localhost:8889/webhook/my-custom-id
 
 # POST request with JSON body
-curl -X POST http://localhost:3000/webhook/my-custom-id \
+curl -X POST http://localhost:8889/webhook/my-custom-id \
   -H "Content-Type: application/json" \
   -d '{
     "event": "user.created",
@@ -125,7 +125,7 @@ The service will capture and store:
 Get all requests for a specific webhook ID:
 
 ```bash
-curl "http://localhost:3000/admin/requests?webhook_uuid=my-custom-id"
+curl "http://localhost:8889/admin/requests?webhook_uuid=my-custom-id"
 ```
 
 ## API Reference
@@ -153,15 +153,15 @@ Replace `{id}` with any identifier (UUID, name, or custom ID). All HTTP methods 
 **Examples:**
 ```bash
 # Simple GET request
-curl http://localhost:3000/webhook/order-123
+curl http://localhost:8889/webhook/order-123
 
 # POST with JSON data
-curl -X POST http://localhost:3000/webhook/order-123 \
+curl -X POST http://localhost:8889/webhook/order-123 \
   -H "Content-Type: application/json" \
   -d '{"status": "shipped"}'
 
 # POST with query parameters
-curl -X POST "http://localhost:3000/webhook/order-123?status=paid&amount=99.99"
+curl -X POST "http://localhost:8889/webhook/order-123?status=paid&amount=99.99"
 ```
 
 ### Admin Endpoints
@@ -219,7 +219,7 @@ Environment variables (`.env`):
 
 ```env
 # Server
-PORT=3000
+PORT=8889
 NODE_ENV=development
 
 # Database
@@ -234,7 +234,7 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 
 # Security
-ALLOWED_ORIGINS=http://localhost:3000
+ALLOWED_ORIGINS=http://localhost:8889
 API_KEY=your-secret-api-key-change-in-production
 
 # Logging
@@ -339,20 +339,20 @@ webhook-app/
 
 ```bash
 # Check health
-curl http://localhost:3000/health
+curl http://localhost:8889/health
 
 # Create a webhook
-curl -X POST http://localhost:3000/webhook \
+curl -X POST http://localhost:8889/webhook \
   -H "Content-Type: application/json" \
   -d '{"name":"Test","description":"Testing"}'
 
 # Send a webhook request (replace UUID)
-curl -X POST http://localhost:3000/webhook/{uuid} \
+curl -X POST http://localhost:8889/webhook/{uuid} \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}'
 
 # View requests (replace UUID and add API key if needed)
-curl "http://localhost:3000/admin/requests?webhook_uuid={uuid}"
+curl "http://localhost:8889/admin/requests?webhook_uuid={uuid}"
 ```
 
 ## Deployment
@@ -428,7 +428,7 @@ Configure log level via `LOG_LEVEL` environment variable:
 
 ```bash
 # Create webhook for order notifications
-curl -X POST http://localhost:3000/webhook \
+curl -X POST http://localhost:8889/webhook \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Order Notifications",
@@ -437,7 +437,7 @@ curl -X POST http://localhost:3000/webhook \
 
 # Response contains UUID: "abc-123-..."
 # Send order notification
-curl -X POST http://localhost:3000/webhook/abc-123-... \
+curl -X POST http://localhost:8889/webhook/abc-123-... \
   -H "Content-Type: application/json" \
   -d '{
     "order_id": 12345,
@@ -450,7 +450,7 @@ curl -X POST http://localhost:3000/webhook/abc-123-... \
 
 ```bash
 # Create payment webhook
-curl -X POST http://localhost:3000/webhook \
+curl -X POST http://localhost:8889/webhook \
   -d '{"name": "Stripe Webhooks"}'
 
 # Stripe sends notification to your UUID endpoint
@@ -461,7 +461,7 @@ curl -X POST http://localhost:3000/webhook \
 
 ```bash
 # Get last 50 requests for a webhook
-curl "http://localhost:3000/admin/requests?webhook_uuid=abc-123-...&limit=50&offset=0"
+curl "http://localhost:8889/admin/requests?webhook_uuid=abc-123-...&limit=50&offset=0"
 ```
 
 ## Troubleshooting
