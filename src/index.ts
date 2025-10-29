@@ -4,6 +4,7 @@ import { logger } from './lib/logger';
 import { rateLimiter } from './middleware/rateLimiter';
 import { corsMiddleware, apiKeyAuth } from './middleware/security';
 import { WebhookService } from './services/webhookService';
+import { checkDbConnection } from './db/db';
 import webhookRoutes from './routes/webhook';
 import adminRoutes from './routes/admin';
 
@@ -180,16 +181,30 @@ app.onError((err, c) => {
     return c.json({ error: 'Internal Server Error' }, 500);
 });
 
+async function startServer() {
+    logger.info({ port: config.port, env: config.env }, 'Webhook service starting');
+
+    // Check database connection
+    logger.info('Checking database connection...');
+    const dbConnected = await checkDbConnection();
+
+    if (!dbConnected) {
+        logger.error('Failed to connect to database. Exiting...');
+        process.exit(1);
+    }
+
+    logger.info(`Server is running on http://localhost:${config.port}`);
+    logger.info(`Environment: ${config.env}`);
+    logger.info(`Webhook endpoint: http://localhost:${config.port}/webhook`);
+    logger.info(`Root webhook endpoint: http://localhost:${config.port}/{uuid}`);
+    logger.info(`Admin endpoint: http://localhost:${config.port}/admin`);
+
+    return {
+        port: config.port,
+        fetch: app.fetch,
+    };
+}
+
 const port = config.port;
 
-export default {
-    port,
-    fetch: app.fetch,
-};
-
-logger.info({ port, env: config.env }, 'Webhook service starting');
-logger.info(`Server is running on http://localhost:${port}`);
-logger.info(`Environment: ${config.env}`);
-logger.info(`Webhook endpoint: http://localhost:${port}/webhook`);
-logger.info(`Root webhook endpoint: http://localhost:${port}/{uuid}`);
-logger.info(`Admin endpoint: http://localhost:${port}/admin`);
+export default await startServer();

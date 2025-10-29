@@ -2,10 +2,7 @@ version: '3.9'
 
 services:
   webhook-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: app
+    image: webhook-app:latest
     container_name: webhook-app
     restart: unless-stopped
     ports:
@@ -33,11 +30,6 @@ services:
       - webhook-network
     volumes:
       - ./logs:/app/logs
-    command: >
-      sh -c "
-        echo 'Starting webhook service...' &&
-        bun run src/index.ts
-      "
 
 networks:
   webhook-network:

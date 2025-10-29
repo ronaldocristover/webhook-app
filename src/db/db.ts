@@ -19,6 +19,19 @@ const connection = mysql.createPool({
 
 export const db = drizzle(connection, { schema, mode: 'default', logger: config.env === 'development' });
 
+export async function checkDbConnection(): Promise<boolean> {
+    try {
+        const conn = await connection.getConnection();
+        await conn.ping();
+        conn.release();
+        logger.info('Database connection successful');
+        return true;
+    } catch (error) {
+        logger.error({ error }, 'Database connection failed');
+        return false;
+    }
+}
+
 export async function closeDb() {
     await connection.end();
 }

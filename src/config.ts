@@ -22,7 +22,7 @@ function loadConfig(): Config {
     const env = process.env.NODE_ENV || 'development';
 
     return {
-        port: parseInt(process.env.PORT || '8889', 10),
+        port: parseInt(process.env.PORT || '3000', 10),
         env,
         db: {
             host: process.env.DB_HOST || 'localhost',
