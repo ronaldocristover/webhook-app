@@ -5,9 +5,9 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3001';
 const TEST_UUID = 'e2e-test-uuid-' + Date.now();
 
 describe('Webhook Service E2E Tests', () => {
-  beforeAll(async () => {
-    // Tests initialized
-  });
+    beforeAll(async () => {
+        // Tests initialized
+    });
 
     afterAll(async () => {
         await closeDb();
